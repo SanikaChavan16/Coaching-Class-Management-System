@@ -1,7 +1,10 @@
 const { Client, LocalAuth } = require('whatsapp-web.js');
+const path = require('path');
 
 const client = new Client({
-    authStrategy: new LocalAuth(),
+    authStrategy: new LocalAuth({
+        dataPath: path.join('/tmp', '.wwebjs_auth') // ✅ Fix: Store session in a writable directory
+    }),
     puppeteer: {
         headless: false,
         args: ['--no-sandbox', '--disable-setuid-sandbox']
