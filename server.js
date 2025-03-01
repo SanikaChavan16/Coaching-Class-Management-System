@@ -1,9 +1,13 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const session = require('express-session');
+const MongoStore = require('connect-mongo');
 const connectDB = require('./config/db');
 
+// Load environment variables
 dotenv.config();
+
+// Connect to database
 connectDB();
 
 const app = express();
@@ -15,11 +19,17 @@ app.use(express.static('public'));
 
 app.set('view engine', 'ejs');
 
+// Session Configuration
 app.use(session({
-    secret: 'secretkey',
+    secret: process.env.JWT_SECRET || 'defaultsecret', // Use JWT_SECRET from .env
     resave: false,
-    saveUninitialized: true,
-    cookie: { secure: false } // Set to true if using HTTPS
+    saveUninitialized: false,
+    store: MongoStore.create({ mongoUrl: process.env.MONGO_URI }), // Store sessions in MongoDB
+    cookie: {
+        secure: process.env.NODE_ENV === 'production', // Secure only in production (HTTPS)
+        httpOnly: true, // Prevents client-side JS from accessing the cookie
+        maxAge: 24 * 60 * 60 * 1000 // Session expires in 24 hours
+    }
 }));
 
 // Routes
@@ -39,5 +49,6 @@ app.get('/auth/logout', (req, res) => {
     });
 });
 
+// Start the Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
