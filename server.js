@@ -37,7 +37,7 @@ app.use('/auth', require('./routes/auth'));
 app.use('/dashboard', require('./routes/dashboard'));
 app.use('/students', require('./routes/students'));
 
-// Redirect to login page if not logged in
+// Redirect to login page
 app.get('/', (req, res) => {
     res.redirect('/auth/login');
 });

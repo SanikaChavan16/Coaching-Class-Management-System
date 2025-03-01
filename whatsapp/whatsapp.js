@@ -44,7 +44,6 @@ const sendMessage = async (phone, message) => {
         formattedPhone = `${formattedPhone}@c.us`;
 
         await client.sendMessage(formattedPhone, message);
-        //console.log(`✅ Message sent to ${formattedPhone}`);
     } catch (error) {
         console.error(`❌ Error sending message to ${phone}:`, error);
     }

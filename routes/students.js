@@ -60,23 +60,19 @@ router.post('/register', async (req, res) => {
             reminderDate: reminderDate || null,
             reminderTime: reminderTime || null
         });
-        
+
         await newStudent.save();
-        // console.log(`✅ Student Registered: ${name}, Phone: ${phone}`);
 
         // ✅ Send Registration Success Message
         await sendMessage(phone, `✅ Registration Successful! Welcome, ${name}.`);
-        ///console.log(`📩 Registration message sent to ${phone}`);
 
         // ✅ Send Paid Fees Confirmation if paid
         if (paidFees > 0) {
             await sendMessage(phone, `💰 Fees Paid: ₹${paidFees}`);
-            //console.log(`📩 Paid fees message sent to ${phone}`);
         }
 
         // ✅ Schedule Reminder if date & time are provided
         if (reminderDate && reminderTime) {
-            //console.log(`🔄 Scheduling reminder for ${phone} on ${reminderDate} at ${reminderTime}`);
             scheduleMessage(phone, `📢 Reminder: Your remaining fees are pending!`, reminderDate, reminderTime);
         }
 
