@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const Student = require('../models/Student'); // ✅ Correct path
-
+const Student = require('../models/Student'); // ✅ Ensure correct path
 const { sendMessage } = require('../whatsapp/whatsapp');
 const { scheduleMessage } = require('../whatsapp/scheduler');
 
@@ -100,28 +99,47 @@ router.post('/update-fees/:id', async (req, res) => {
         const { paidFees } = req.body;
         const student = await Student.findById(req.params.id);
         if (!student) return res.status(404).send('Student not found');
-        
+
         student.paidFees = paidFees;
         await student.save();
-        
-        res.json({ success: true, remainingFees: student.courseFees - student.paidFees });
 
+        res.json({ success: true, remainingFees: student.courseFees - student.paidFees });
     } catch (error) {
         res.status(500).send('Error updating fees');
     }
 });
 
-// 📌 Schedule Reminder for Pending Fees
+// 📌 Schedule Reminder for Pending Fees (✅ Fixed Version)
 router.post('/schedule-reminder', async (req, res) => {
     try {
         const { reminderDate, reminderTime } = req.body;
-        const students = await Student.find({ $where: 'this.courseFees > this.paidFees' });
+
+        console.log(`📅 Received Reminder Date: ${reminderDate}, Time: ${reminderTime}`);
+
+        // ✅ Validate Date & Time
+        const reminderDateTime = new Date(`${reminderDate}T${reminderTime}:00`);
+        if (isNaN(reminderDateTime.getTime())) {
+            return res.json({ success: false, message: 'Invalid date/time format' });
+        }
+
+        // ✅ Fetch students with pending fees
+        const students = await Student.find({ $expr: { $gt: ["$courseFees", "$paidFees"] } });
+
+        if (students.length === 0) {
+            return res.json({ success: false, message: 'No students with pending fees.' });
+        }
+
         students.forEach(student => {
-            scheduleMessage(student.phone, `Reminder: Your fees are pending!`, reminderDate, reminderTime);
+            console.log(`📢 Scheduling for: ${student.phone}, Name: ${student.name}`);
+            scheduleMessage(student.phone, `📢 Reminder: Your fees are pending!`, reminderDate, reminderTime);
         });
+
+        console.log("✅ All reminders scheduled successfully!");
         res.json({ success: true });
+
     } catch (error) {
-        res.status(500).send('Error scheduling reminders');
+        console.error("❌ Error scheduling reminders:", error);
+        res.status(500).json({ success: false, message: 'Error scheduling reminders' });
     }
 });
 
