@@ -18,7 +18,7 @@ const client = new Client({
 });
 
 client.on('qr', qr => {
-    console.log('⚠️ QR Code generated! Scan to log in.');  // Show only one message, no QR flood
+    console.log('⚠️ QR Code generated! Scan to log in.');
 });
 
 client.on('ready', () => {
@@ -39,11 +39,16 @@ client.on('disconnected', reason => {
     client.initialize();  // Auto-reconnect
 });
 
+// ✅ Function to Check WhatsApp Client Readiness
+const isClientReady = () => {
+    return client && client.info;
+};
+
 // ✅ Function to Send WhatsApp Messages
 const sendMessage = async (phone, message) => {
     try {
-        if (!client.info) {
-            console.error("❌ WhatsApp Client not initialized! Please wait.");
+        if (!isClientReady()) {
+            console.error("❌ WhatsApp Client not initialized or disconnected! Please wait.");
             return;
         }
 
@@ -60,6 +65,7 @@ const sendMessage = async (phone, message) => {
     }
 };
 
+// ✅ Initialize WhatsApp Client
 client.initialize();
 
-module.exports = { client, sendMessage };
+module.exports = { client, sendMessage, isClientReady };

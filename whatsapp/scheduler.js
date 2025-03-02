@@ -1,5 +1,5 @@
 const cron = require('node-cron');
-const { sendMessage } = require('./whatsapp');
+const { sendMessage, isClientReady } = require('./whatsapp');
 
 const scheduledTasks = {}; // Store scheduled jobs
 
@@ -35,6 +35,11 @@ function scheduleMessage(phone, message, date, time) {
 
         // ✅ Schedule the message
         const task = cron.schedule(cronTime, async () => {
+            if (!isClientReady()) {
+                console.error("❌ WhatsApp Client not initialized! Skipping message.");
+                return;
+            }
+
             console.log(`📢 Sending reminder to ${phone}`);
             await sendMessage(phone, message);
             task.stop(); // ✅ Stop the task after execution
