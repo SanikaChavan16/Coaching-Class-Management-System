@@ -19,7 +19,7 @@ const app = express();
 // Middleware
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public'))); // Absolute path to public folder
+app.use(express.static(path.join(__dirname, 'public'))); // Serve static files
 
 // Set EJS as the templating engine
 app.set('view engine', 'ejs');
@@ -27,7 +27,7 @@ app.set('view engine', 'ejs');
 // Session Configuration
 app.use(session({
     name: 'sessionID', // Custom session name
-    secret: process.env.JWT_SECRET || 'defaultsecret', // Use JWT_SECRET from .env
+    secret: process.env.JWT_SECRET || 'defaultsecret', // Use secret from .env
     resave: false,
     saveUninitialized: false,
     store: MongoStore.create({ 
@@ -47,7 +47,7 @@ app.use('/auth', require('./routes/auth'));
 app.use('/dashboard', require('./routes/dashboard'));
 app.use('/students', require('./routes/students'));
 
-// Redirect root URL to login page
+// Root URL Redirects to Login Page
 app.get('/', (req, res) => {
     res.redirect('/auth/login');
 });
@@ -57,9 +57,9 @@ app.get('/auth/logout', (req, res) => {
     req.session.destroy(err => {
         if (err) {
             console.error("❌ Logout Error:", err);
-            return res.status(500).send("Error logging out");
+            return res.status(500).json({ message: "Error logging out" });
         }
-        res.clearCookie('sessionID'); // Clear session cookie
+        res.clearCookie('sessionID', { path: '/' }); // Ensure session cookie is cleared
         res.redirect('/auth/login');
     });
 });
@@ -71,4 +71,4 @@ app.use((req, res) => {
 
 // Start the Server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`✅ Server running on port ${PORT}`));

@@ -3,11 +3,17 @@ const path = require('path');
 
 const client = new Client({
     authStrategy: new LocalAuth({
-        dataPath: path.join('/tmp', '.wwebjs_auth') // ✅ Fix: Store session in a writable directory
+        dataPath: path.join('/tmp', '.wwebjs_auth') // ✅ Stores session in Render's writable directory
     }),
     puppeteer: {
-        headless: false,
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
+        headless: 'new', // ✅ Fully headless for Render
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-gpu',
+            '--disable-dev-shm-usage',
+            '--disable-software-rasterizer'
+        ]
     }
 });
 
@@ -26,10 +32,14 @@ client.on('authenticated', () => {
     console.log('🔓 WhatsApp Client Authenticated!');
 });
 
+client.on('auth_failure', msg => {
+    console.error("❌ Authentication Failed! Reason:", msg);
+});
+
 client.on('disconnected', (reason) => {
     console.error("🔴 WhatsApp Web Disconnected! Reason:", reason);
     client.destroy();
-    client.initialize();
+    setTimeout(() => client.initialize(), 5000); // ✅ Auto-reconnect after 5 sec
 });
 
 // ✅ Send WhatsApp Message Function
@@ -47,6 +57,7 @@ const sendMessage = async (phone, message) => {
         formattedPhone = `${formattedPhone}@c.us`;
 
         await client.sendMessage(formattedPhone, message);
+        console.log(`✅ Message sent to ${phone}`);
     } catch (error) {
         console.error(`❌ Error sending message to ${phone}:`, error);
     }
