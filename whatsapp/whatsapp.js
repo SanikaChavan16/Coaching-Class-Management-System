@@ -39,13 +39,16 @@ client.on('auth_failure', msg => {
 client.on('disconnected', (reason) => {
     console.error("🔴 WhatsApp Web Disconnected! Reason:", reason);
     client.destroy();
-    setTimeout(() => client.initialize(), 5000); // ✅ Auto-reconnect after 5 sec
+    setTimeout(() => {
+        console.log("♻️ Reconnecting WhatsApp Client...");
+        client.initialize();
+    }, 5000); // ✅ Auto-reconnect after 5 sec
 });
 
 // ✅ Send WhatsApp Message Function
 const sendMessage = async (phone, message) => {
     try {
-        if (!client.info) {
+        if (!client || !client.info) {
             console.error("❌ WhatsApp Client not initialized! Please wait.");
             return;
         }
@@ -56,11 +59,21 @@ const sendMessage = async (phone, message) => {
         }
         formattedPhone = `${formattedPhone}@c.us`;
 
-        await client.sendMessage(formattedPhone, message);
-        console.log(`✅ Message sent to ${phone}`);
+        const msg = await client.sendMessage(formattedPhone, message);
+        console.log(`✅ Message sent to ${phone} | ID: ${msg.id.id}`);
     } catch (error) {
         console.error(`❌ Error sending message to ${phone}:`, error);
     }
 };
 
-module.exports = { client, sendMessage };
+// ✅ Check Client Connection Status
+const checkWhatsAppStatus = () => {
+    if (!client || !client.info) {
+        console.error("⚠️ WhatsApp Client is not ready!");
+        return false;
+    }
+    console.log("✅ WhatsApp Client is running.");
+    return true;
+};
+
+module.exports = { client, sendMessage, checkWhatsAppStatus };

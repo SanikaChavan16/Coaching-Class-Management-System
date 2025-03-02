@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const student=require('../models/student') // ✅ Ensure correct path
+const Student = require('../models/student'); // ✅ Fixed capitalization issue
 const { sendMessage } = require('../whatsapp/whatsapp');
 const { scheduleMessage } = require('../whatsapp/scheduler');
 
@@ -12,7 +12,7 @@ router.get('/register', (req, res) => {
 // 📌 View a Single Student
 router.get('/view/:id', async (req, res) => {
     try {
-        const student = await student.findById(req.params.id);
+        const student = await Student.findById(req.params.id);
         if (!student) {
             return res.status(404).send('Student not found');
         }
@@ -26,7 +26,7 @@ router.get('/view/:id', async (req, res) => {
 // 📌 Delete Student
 router.post('/delete/:id', async (req, res) => {
     try {
-        await student.findByIdAndDelete(req.params.id);
+        await Student.findByIdAndDelete(req.params.id);
         res.redirect('/students/records');
     } catch (error) {
         console.error("❌ Error deleting student:", error);
@@ -37,7 +37,7 @@ router.post('/delete/:id', async (req, res) => {
 // 📌 Show All Registered Students
 router.get('/records', async (req, res) => {
     try {
-        const students = await student.find();
+        const students = await Student.find();
         res.render('records', { students });
     } catch (error) {
         console.error("❌ Error fetching students:", error);
@@ -50,7 +50,7 @@ router.post('/register', async (req, res) => {
     const { name, phone, email, course, courseFees, paidFees, reminderDate, reminderTime } = req.body;
 
     try {
-        const newStudent = new student({
+        const newStudent = new Student({
             name,
             phone,
             email,
@@ -86,25 +86,32 @@ router.post('/register', async (req, res) => {
 // 📌 Fees Management Page
 router.get('/fees-management', async (req, res) => {
     try {
-        const students = await student.find();
+        const students = await Student.find();
         res.render('feesManagement', { students });
     } catch (error) {
         res.status(500).send('Error fetching student records');
     }
 });
 
-// 📌 Update Fees
+// 📌 Update Fees and Send WhatsApp Confirmation
 router.post('/update-fees/:id', async (req, res) => {
     try {
         const { paidFees } = req.body;
-        const student = await student.findById(req.params.id);
+        const student = await Student.findById(req.params.id);
         if (!student) return res.status(404).send('Student not found');
 
+        // ✅ Update Fees in Database
         student.paidFees = paidFees;
         await student.save();
 
-        res.json({ success: true, remainingFees: student.courseFees - student.paidFees });
+        // ✅ Send WhatsApp Confirmation After Fee Update
+        const remainingFees = student.courseFees - paidFees;
+        const message = `✅ Your fee payment of ₹${paidFees} has been recorded. Remaining fees: ₹${remainingFees}.`;
+        await sendMessage(student.phone, message);
+
+        res.json({ success: true, remainingFees });
     } catch (error) {
+        console.error("❌ Error updating fees:", error);
         res.status(500).send('Error updating fees');
     }
 });
@@ -123,7 +130,7 @@ router.post('/schedule-reminder', async (req, res) => {
         }
 
         // ✅ Fetch students with pending fees
-        const students = await student.find({ $expr: { $gt: ["$courseFees", "$paidFees"] } });
+        const students = await Student.find({ $expr: { $gt: ["$courseFees", "$paidFees"] } });
 
         if (students.length === 0) {
             return res.json({ success: false, message: 'No students with pending fees.' });
