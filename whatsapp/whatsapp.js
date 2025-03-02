@@ -1,12 +1,12 @@
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const path = require('path');
 
+const sessionPath = path.join(__dirname, 'wwebjs_auth');  // Store session data locally
+
 const client = new Client({
-    authStrategy: new LocalAuth({
-        dataPath: path.join('/tmp', '.wwebjs_auth') // ✅ Stores session in Render's writable directory
-    }),
+    authStrategy: new LocalAuth({ dataPath: sessionPath }),
     puppeteer: {
-        headless: 'new', // ✅ Fully headless for Render
+        headless: true,
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
@@ -17,15 +17,12 @@ const client = new Client({
     }
 });
 
-client.initialize();
-
-// ✅ Ensure Client is Ready
-client.on('ready', () => {
-    console.log('✅ WhatsApp Client is Ready!');
+client.on('qr', qr => {
+    console.log('⚠️ QR Code generated! Scan to log in.');  // Show only one message, no QR flood
 });
 
-client.on('qr', qr => {
-    console.log('📸 Scan this QR Code to log in:', qr);
+client.on('ready', () => {
+    console.log('✅ WhatsApp Client is Ready!');
 });
 
 client.on('authenticated', () => {
@@ -36,19 +33,16 @@ client.on('auth_failure', msg => {
     console.error("❌ Authentication Failed! Reason:", msg);
 });
 
-client.on('disconnected', (reason) => {
+client.on('disconnected', reason => {
     console.error("🔴 WhatsApp Web Disconnected! Reason:", reason);
-    client.destroy();
-    setTimeout(() => {
-        console.log("♻️ Reconnecting WhatsApp Client...");
-        client.initialize();
-    }, 5000); // ✅ Auto-reconnect after 5 sec
+    console.log("♻️ Reconnecting...");
+    client.initialize();  // Auto-reconnect
 });
 
-// ✅ Send WhatsApp Message Function
+// ✅ Function to Send WhatsApp Messages
 const sendMessage = async (phone, message) => {
     try {
-        if (!client || !client.info) {
+        if (!client.info) {
             console.error("❌ WhatsApp Client not initialized! Please wait.");
             return;
         }
@@ -59,21 +53,13 @@ const sendMessage = async (phone, message) => {
         }
         formattedPhone = `${formattedPhone}@c.us`;
 
-        const msg = await client.sendMessage(formattedPhone, message);
-        console.log(`✅ Message sent to ${phone} | ID: ${msg.id.id}`);
+        await client.sendMessage(formattedPhone, message);
+        console.log(`✅ Message sent to ${phone}`);
     } catch (error) {
         console.error(`❌ Error sending message to ${phone}:`, error);
     }
 };
 
-// ✅ Check Client Connection Status
-const checkWhatsAppStatus = () => {
-    if (!client || !client.info) {
-        console.error("⚠️ WhatsApp Client is not ready!");
-        return false;
-    }
-    console.log("✅ WhatsApp Client is running.");
-    return true;
-};
+client.initialize();
 
-module.exports = { client, sendMessage, checkWhatsAppStatus };
+module.exports = { client, sendMessage };
