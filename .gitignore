@@ -10,4 +10,4 @@ node_modules/
 
 # Ignore log files
 *.log
-.vercel
+#.vercel

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const student=require('../models/student') // ✅ Ensure correct path
+const Student = require('../models/Student'); // ✅ Correct path
+
 const { sendMessage } = require('../whatsapp/whatsapp');
 const { scheduleMessage } = require('../whatsapp/scheduler');
 
@@ -12,7 +13,7 @@ router.get('/register', (req, res) => {
 // 📌 View a Single Student
 router.get('/view/:id', async (req, res) => {
     try {
-        const student = await student.findById(req.params.id);
+        const student = await Student.findById(req.params.id);
         if (!student) {
             return res.status(404).send('Student not found');
         }
@@ -26,7 +27,7 @@ router.get('/view/:id', async (req, res) => {
 // 📌 Delete Student
 router.post('/delete/:id', async (req, res) => {
     try {
-        await student.findByIdAndDelete(req.params.id);
+        await Student.findByIdAndDelete(req.params.id);
         res.redirect('/students/records');
     } catch (error) {
         console.error("❌ Error deleting student:", error);
@@ -37,7 +38,7 @@ router.post('/delete/:id', async (req, res) => {
 // 📌 Show All Registered Students
 router.get('/records', async (req, res) => {
     try {
-        const students = await student.find();
+        const students = await Student.find();
         res.render('records', { students });
     } catch (error) {
         console.error("❌ Error fetching students:", error);
@@ -50,7 +51,7 @@ router.post('/register', async (req, res) => {
     const { name, phone, email, course, courseFees, paidFees, reminderDate, reminderTime } = req.body;
 
     try {
-        const newStudent = new student({
+        const newStudent = new Student({
             name,
             phone,
             email,
@@ -86,7 +87,7 @@ router.post('/register', async (req, res) => {
 // 📌 Fees Management Page
 router.get('/fees-management', async (req, res) => {
     try {
-        const students = await student.find();
+        const students = await Student.find();
         res.render('feesManagement', { students });
     } catch (error) {
         res.status(500).send('Error fetching student records');
@@ -97,49 +98,30 @@ router.get('/fees-management', async (req, res) => {
 router.post('/update-fees/:id', async (req, res) => {
     try {
         const { paidFees } = req.body;
-        const student = await student.findById(req.params.id);
+        const student = await Student.findById(req.params.id);
         if (!student) return res.status(404).send('Student not found');
-
+        
         student.paidFees = paidFees;
         await student.save();
-
+        
         res.json({ success: true, remainingFees: student.courseFees - student.paidFees });
+
     } catch (error) {
         res.status(500).send('Error updating fees');
     }
 });
 
-// 📌 Schedule Reminder for Pending Fees (✅ Fixed Version)
+// 📌 Schedule Reminder for Pending Fees
 router.post('/schedule-reminder', async (req, res) => {
     try {
         const { reminderDate, reminderTime } = req.body;
-
-        console.log(`📅 Received Reminder Date: ${reminderDate}, Time: ${reminderTime}`);
-
-        // ✅ Validate Date & Time
-        const reminderDateTime = new Date(`${reminderDate}T${reminderTime}:00`);
-        if (isNaN(reminderDateTime.getTime())) {
-            return res.json({ success: false, message: 'Invalid date/time format' });
-        }
-
-        // ✅ Fetch students with pending fees
-        const students = await student.find({ $expr: { $gt: ["$courseFees", "$paidFees"] } });
-
-        if (students.length === 0) {
-            return res.json({ success: false, message: 'No students with pending fees.' });
-        }
-
+        const students = await Student.find({ $where: 'this.courseFees > this.paidFees' });
         students.forEach(student => {
-            console.log(`📢 Scheduling for: ${student.phone}, Name: ${student.name}`);
-            scheduleMessage(student.phone, `📢 Reminder: Your fees are pending!`, reminderDate, reminderTime);
+            scheduleMessage(student.phone, `Reminder: Your fees are pending!`, reminderDate, reminderTime);
         });
-
-        console.log("✅ All reminders scheduled successfully!");
         res.json({ success: true });
-
     } catch (error) {
-        console.error("❌ Error scheduling reminders:", error);
-        res.status(500).json({ success: false, message: 'Error scheduling reminders' });
+        res.status(500).send('Error scheduling reminders');
     }
 });
 
